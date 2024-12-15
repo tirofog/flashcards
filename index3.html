@@ -114,27 +114,21 @@
         const cellText1 = row[0] || '';
         const cellText2 = row[1] || '';
 
-        const yPos = Math.floor(currentRow / 2) % rowsPerPage * rowHeight + 20;
-        const col1X = (currentRow % 4) * colWidth + 10;
-        const col2X = col1X + colWidth;
+        const yPos = Math.floor(currentRow / 4) % rowsPerPage * rowHeight + 20;
+        const colIndex = currentRow % 4;
+        const xPos = colIndex * colWidth + 10;
 
-        if (currentRow > 0 && currentRow % (rowsPerPage * 2) === 0) {
+        if (currentRow > 0 && currentRow % (rowsPerPage * 4) === 0) {
           pdf.addPage();
           currentRow = 0;
         }
 
         // Draw cell borders
-        pdf.rect(col1X, yPos - rowHeight + 5, colWidth, rowHeight);
-        pdf.rect(col2X, yPos - rowHeight + 5, colWidth, rowHeight);
+        pdf.rect(xPos, yPos - rowHeight + 5, colWidth, rowHeight);
 
-        // Add wrapped and centered text in the cells
-        pdf.text(cellText1, col1X + colWidth / 2, yPos - rowHeight + 5 + rowHeight / 2, {
-          maxWidth: colWidth - 5,
-          align: 'center',
-          lineHeightFactor: 1.2,
-          baseline: 'middle',
-        });
-        pdf.text(cellText2, col2X + colWidth / 2, yPos - rowHeight + 5 + rowHeight / 2, {
+        // Add wrapped and centered text in the cell
+        const cellText = colIndex % 2 === 0 ? cellText1 : cellText2;
+        pdf.text(cellText, xPos + colWidth / 2, yPos - rowHeight + 5 + rowHeight / 2, {
           maxWidth: colWidth - 5,
           align: 'center',
           lineHeightFactor: 1.2,
