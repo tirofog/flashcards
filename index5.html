@@ -94,16 +94,19 @@
       const { jsPDF } = window.jspdf;
 
       // Define the page size and margins in millimeters (mm)
-      const pageWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const margin = 10; // 1 cm margins
-      const usablePageWidth = pageWidth - 2 * margin;
+      const pageWidth = 297; // A4 width in mm
+      const pageHeight = 210; // A4 height in mm
+      const pageMargin = 0; // 0 cm margins
+      const cellMargin = 5; // 5 mm margins
+      const usablePageWidth = pageWidth - 2 * pageMargin;
+      const usablePageHeight = pageHeight - 2 * pageMargin;
       const columnWidth = usablePageWidth / 4; // Divide usable width among 4 columns
-      const rowHeight = 10; // Fixed row height
+      const rowHeight = usablePageheight / 4; // Fixed row height
 
       const pdf = new jsPDF({
         unit: 'mm', // Set unit to millimeters
-        format: 'a4' // Set page format to A4
+        format: 'a4', // Set page format to A4
+        orientation: 'l' // landscape
       });
 
       // Prepare table data
@@ -120,13 +123,13 @@
       // Generate the table using autoTable
       pdf.autoTable({
         body: tableData, // Table data
-        startY: margin,  // Start at 1 cm from the top
+        startY: pageMargin,  // Start at 0 cm from the top
         theme: 'grid',
         styles: {
           halign: 'center',  // Center align text horizontally
           valign: 'middle',  // Center align text vertically
           fontSize: 10,
-          cellPadding: 3,
+          cellPadding: cellMargin,
           overflow: 'linebreak' // Enable text wrapping
         },
         columnStyles: {
@@ -139,7 +142,7 @@
           minCellHeight: rowHeight // Fixed row height
         },
         pageBreak: 'auto',
-        margin: { top: margin, left: margin, right: margin, bottom: margin }
+        margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
       });
 
       pdf.save('converted.pdf');
