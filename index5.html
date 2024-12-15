@@ -94,6 +94,12 @@
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF();
 
+      // Set page size to A4 and margins to 1 cm (28.35 points)
+      const margin = 28.35;  // 1 cm in points
+      const pageWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      pdf.setPageSize([pageWidth, pageHeight]);
+
       // Prepare table data
       const tableData = [];
       for (let i = 0; i < data.length; i += 2) {
@@ -108,7 +114,7 @@
       // Generate the table using autoTable
       pdf.autoTable({
         body: tableData, // Table data
-        startY: 20,
+        startY: margin,  // Start at 1 cm from the top
         theme: 'grid',
         styles: {
           halign: 'center',  // Center align text horizontally
@@ -124,13 +130,13 @@
           3: { cellWidth: 45 }, // Fixed width for Column 4
         },
         bodyStyles: {
-          minCellHeight: 20 // Fixed row height (prevents dynamic resizing)
+          minCellHeight: 20 // Fixed row height
         },
         pageBreak: 'auto',
+        margin: { top: margin, left: margin, right: margin, bottom: margin }, // Set margins for the table
 
-        // Cell start callback
+        // Cell start callback (adjusting row height after autoTable layout)
         cellStart: function(data) {
-          // Set the row height to the fixed value
           const fixedRowHeight = 20;
           if (data.row.index > 0) {
             const yPosition = data.cell.y;
