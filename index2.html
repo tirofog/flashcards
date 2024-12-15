@@ -132,8 +132,8 @@
       }
       return true;
     }
-    
-    async function generatePDF(data) {
+
+    function generatePDF(data) {
       const { jsPDF } = window.jspdf;
 
       // Define the page size and margins in millimeters (mm)
@@ -162,12 +162,9 @@
         orientation: 'l' // landscape
       });
 
-     // Load and use DejaVu Sans font
-     const customFont = await loadCustomFont();
-     pdf.addFileToVFS("DejaVuSans.ttf", customFont);
-     pdf.addFont("DejaVuSans.ttf", "DejaVuSans", "normal");
-     pdf.setFont("DejaVuSans", "normal");
-      
+      pdf.addFont("https://cdn.jsdelivr.net/npm/@vintproykt/dejavu-fonts-ttf@2.37.0/ttf/DejaVuSans.ttf", "DejaVuSans", "normal");
+      pdf.setFont("DejaVuSans", "normal");      
+
       // Prepare table data
       const tableData = [];
       for (let i = 0; i < data.length; i += 2) {
@@ -188,7 +185,6 @@
           halign: 'center',  // Center align text horizontally
           valign: 'middle',  // Center align text vertically
           fontSize: fontSize,
-          font: "DejaVuSans",
           cellPadding: cellMargin,
           overflow: 'linebreak' // Enable text wrapping
         },
@@ -206,14 +202,6 @@
       });
 
       pdf.save(filename);
-    }
-
-    // Load DejaVu Sans font from an external source
-    async function loadCustomFont() {
-      const fontUrl = "https://cdn.jsdelivr.net/gh/google/fonts/ofl/dejavusans/DejaVuSans.ttf";
-      const fontResponse = await fetch(fontUrl);
-      const fontData = await fontResponse.arrayBuffer();
-      return fontData;
     }
   </script>
 </body>
