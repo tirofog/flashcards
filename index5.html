@@ -54,19 +54,36 @@
 
     <label for="fontSize">Select Font Size:</label>
     <select id="fontSize">
-      <option value="8">8</option>
-      <option value="10" selected>10</option>
+      <option value="10">10</option>
       <option value="12">12</option>
       <option value="14">14</option>
-      <option value="16">16</option>
+      <option value="16" selected>16</option>
+      <option value="18">18</option>
+      <option value="20">20</option>
+      <option value="22">22</option>
+      <option value="24">24</option>
     </select>
 
     <label for="color1">Select Font Color for Columns 1 and 3:</label>
-    <input type="color" id="color1" value="#000000">
+    <!--<input type="color" id="color1" value="#000000">-->
+    <select id="color1">
+      <option value="#000000">Black</option>
+      <option value="#FF0000">Red</option>
+      <option value="#0000FF" selected>Blue</option>
+      <option value="#008000">Green</option>
+      <option value="#FFA500">Orange</option>
+    </select>
 
     <label for="color2">Select Font Color for Columns 2 and 4:</label>
-    <input type="color" id="color2" value="#000000">
-        
+    <!--<input type="color" id="color2" value="#000000">-->
+    <select id="color2">
+      <option value="#000000" selected>Black</option>
+      <option value="#FF0000">Red</option>
+      <option value="#0000FF">Blue</option>
+      <option value="#008000">Green</option>
+      <option value="#FFA500">Orange</option>
+    </select>
+    
     <button id="generatePdf">Convert to PDF</button>
   </div>
 
