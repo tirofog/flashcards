@@ -132,14 +132,6 @@
       }
       return true;
     }
-
-    // Load DejaVu Sans font from an external source
-    async function loadCustomFont() {
-      const fontUrl = "https://cdn.jsdelivr.net/gh/google/fonts/ofl/dejavusans/DejaVuSans.ttf";
-      const fontResponse = await fetch(fontUrl);
-      const fontData = await fontResponse.arrayBuffer();
-      return fontData;
-    }
     
     function generatePDF(data) {
       const { jsPDF } = window.jspdf;
@@ -214,6 +206,14 @@
       });
 
       pdf.save(filename);
+    }
+
+    // Load DejaVu Sans font from an external source
+    async function loadCustomFont() {
+      const fontUrl = "https://cdn.jsdelivr.net/gh/google/fonts/ofl/dejavusans/DejaVuSans.ttf";
+      const fontResponse = await fetch(fontUrl);
+      const fontData = await fontResponse.arrayBuffer();
+      return fontData;
     }
   </script>
 </body>
