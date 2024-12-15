@@ -92,10 +92,18 @@
 
     function generatePDF(data) {
       const { jsPDF } = window.jspdf;
-      const margin = 28.35;  // 1 cm in points
+
+      // Define the page size and margins in millimeters (mm)
+      const pageWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const margin = 10; // 1 cm margins
+      const usablePageWidth = pageWidth - 2 * margin;
+      const columnWidth = usablePageWidth / 4; // Divide usable width among 4 columns
+      const rowHeight = 10; // Fixed row height
+
       const pdf = new jsPDF({
-        unit: 'pt', // Using points as the unit
-        format: 'a4', // Set the page format to A4
+        unit: 'mm', // Set unit to millimeters
+        format: 'a4' // Set page format to A4
       });
 
       // Prepare table data
@@ -108,9 +116,6 @@
           data[i + 1]?.[1] || ""    // 2nd column of 2nd CSV row
         ]);
       }
-
-      // Set reasonable column widths (adjust as necessary)
-      const columnWidth = (210 - (2 * margin)) / 4; // Calculate column width based on A4 page size and margins
 
       // Generate the table using autoTable
       pdf.autoTable({
@@ -125,27 +130,16 @@
           overflow: 'linebreak' // Enable text wrapping
         },
         columnStyles: {
-          0: { cellWidth: columnWidth }, // Calculated width for Column 1
-          1: { cellWidth: columnWidth }, // Calculated width for Column 2
-          2: { cellWidth: columnWidth }, // Calculated width for Column 3
-          3: { cellWidth: columnWidth }, // Calculated width for Column 4
+          0: { cellWidth: columnWidth }, // Set column width
+          1: { cellWidth: columnWidth }, 
+          2: { cellWidth: columnWidth },
+          3: { cellWidth: columnWidth }
         },
         bodyStyles: {
-          minCellHeight: 20 // Fixed row height
+          minCellHeight: rowHeight // Fixed row height
         },
         pageBreak: 'auto',
-        margin: { top: margin, left: margin, right: margin, bottom: margin }, // Set margins for the table
-
-        // Cell start callback (adjusting row height after autoTable layout)
-        cellStart: function(data) {
-          const fixedRowHeight = 20;
-          if (data.row.index > 0) {
-            const yPosition = data.cell.y;
-            data.cell.height = fixedRowHeight;
-            // Adjust Y position to maintain row alignment
-            data.cell.y = yPosition + (fixedRowHeight - data.cell.height);
-          }
-        }
+        margin: { top: margin, left: margin, right: margin, bottom: margin }
       });
 
       pdf.save('converted.pdf');
