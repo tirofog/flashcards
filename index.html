@@ -3,89 +3,194 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CSV to PDF Converter</title>
+  <title>CSV to PDF with Fixed Table</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    input, button, label, select, textarea {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 150px;
+      resize: vertical;
+    }
+    button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
-  <h1>CSV to PDF Converter</h1>
-  <form id="csvForm">
-    <label for="csvFile">Upload CSV File:</label>
-    <input type="file" id="csvFile" accept=".csv" required>
-    <br><br>
-    <label for="rowsPerPage">Rows Per Page:</label>
-    <input type="number" id="rowsPerPage" min="1" value="10" required>
-    <br><br>
-    <button type="submit">Convert to PDF</button>
-  </form>
+  <div class="container">
+    <h1>CSV to PDF</h1>
+
+    <label for="csvFile">Upload your CSV file:</label>
+    <input type="file" id="csvFile" accept=".csv">
+
+    <label for="csvText">Or paste your CSV content here:</label>
+    <textarea id="csvText" placeholder="e.g., een baviaan,a baboon\neen jachtluipaard,a cheetah\neen chimpansee,a chimpanzee\neen hert,a deer"></textarea>
+
+    <label for="fontSize">Select Font Size:</label>
+    <select id="fontSize">
+      <option value="10">10</option>
+      <option value="12">12</option>
+      <option value="14">14</option>
+      <option value="16" selected>16</option>
+      <option value="18">18</option>
+      <option value="20">20</option>
+      <option value="22">22</option>
+      <option value="24">24</option>
+    </select>
+
+    <label for="delimiter">Select CSV delimiter</label>
+    <select id="delimiter">
+      <option value="\t" selected>Tab</option>
+      <option value=",">Comma</option>
+      <option value=";">Semicolon</option>
+    </select>
+
+    <label for="color1">Select Font Color for Columns 1 and 3:</label>
+    <!--<input type="color" id="color1" value="#000000">-->
+    <select id="color1">
+      <option value="#000000">Black</option>
+      <option value="#FF0000">Red</option>
+      <option value="#0000FF" selected>Blue</option>
+      <option value="#008000">Green</option>
+      <option value="#FFA500">Orange</option>
+    </select>
+
+    <label for="color2">Select Font Color for Columns 2 and 4:</label>
+    <!--<input type="color" id="color2" value="#000000">-->
+    <select id="color2">
+      <option value="#000000" selected>Black</option>
+      <option value="#FF0000">Red</option>
+      <option value="#0000FF">Blue</option>
+      <option value="#008000">Green</option>
+      <option value="#FFA500">Orange</option>
+    </select>
+    
+    <button id="generatePdf">Convert to PDF</button>
+  </div>
+
   <script>
-    document.getElementById('csvForm').addEventListener('submit', async function(event) {
-      event.preventDefault();
+    document.getElementById('generatePdf').addEventListener('click', () => {
+      const fileInput = document.getElementById('csvFile');
+      const csvText = document.getElementById('csvText').value.trim();
 
-      const file = document.getElementById('csvFile').files[0];
-      const rowsPerPage = parseInt(document.getElementById('rowsPerPage').value, 10);
-
-      if (!file) {
-        alert('Please upload a CSV file.');
+      if (!fileInput.files.length && !csvText) {
+        alert('Please upload a CSV file or paste CSV content.');
         return;
       }
 
-      // Parse the CSV file
-      Papa.parse(file, {
-        complete: function(results) {
-          const data = results.data;
-
-          // Validate CSV content
-          if (data.length < 1 || data[0].length !== 2) {
-            alert('The CSV file must have exactly two columns.');
-            return;
-          }
-
-          generatePDF(data, rowsPerPage);
-        },
-        error: function(error) {
-          alert('Error parsing CSV: ' + error.message);
-        }
-      });
+      if (fileInput.files.length) {
+        const file = fileInput.files[0];
+        Papa.parse(file, {
+          complete: (results) => {
+            const data = results.data;
+            if (!validateCsvData(data)) return;
+            generatePDF(data);
+          },
+          error: () => alert('Error reading CSV file.')
+        });
+      } else if (csvText) {
+        const delimiter = parseInt(document.getElementById('delimiter').value);
+        const data = Papa.parse(csvText, { delimiter: delimiter, skipEmptyLines: true }).data;
+        if (!validateCsvData(data)) return;
+        generatePDF(data);
+      }
     });
 
-    function generatePDF(data, rowsPerPage) {
+    function validateCsvData(data) {
+      if (data.length < 2 || data[0].length !== 2) {
+        alert('The CSV data must have exactly two columns.');
+        return false;
+      }
+      return true;
+    }
+
+    function generatePDF(data) {
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF();
 
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const usableWidth = pageWidth - margin * 2;
-      const usableHeight = pageHeight - margin * 2;
+      // Define the page size and margins in millimeters (mm)
+      const pageWidth = 297; // A4 width in mm
+      const pageHeight = 210; // A4 height in mm
+      const pageMargin = 0; // 0 cm margins
+      const cellMargin = 5; // 5 mm margins
+      const usablePageWidth = pageWidth - 2 * pageMargin;
+      const usablePageHeight = pageHeight - 2 * pageMargin;
+      const columnWidth = usablePageWidth / 4; // Divide usable width among 4 columns
+      const rowHeight = usablePageHeight / 4; // Fixed row height
 
-      const rowHeight = usableHeight / rowsPerPage;
-      const colWidths = [usableWidth * 0.5, usableWidth * 0.5];
+      // Define font size and colors
+      const fontSize = parseInt(document.getElementById('fontSize').value);
+      const color1 = document.getElementById('color1').value;
+      const color2 = document.getElementById('color2').value;
 
-      let currentRow = 0;
-      let page = 1;
+      const pdf = new jsPDF({
+        unit: 'mm', // Set unit to millimeters
+        format: 'a4', // Set page format to A4
+        orientation: 'l' // landscape
+      });
 
-      for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-
-        // Add new page if needed
-        if (currentRow >= rowsPerPage) {
-          pdf.addPage();
-          currentRow = 0;
-          page++;
-        }
-
-        const y = margin + currentRow * rowHeight;
-
-        // Draw columns
-        pdf.text(row[0], margin, y + rowHeight / 2, { baseline: 'middle', maxWidth: colWidths[0] });
-        pdf.text(row[1], margin + colWidths[0], y + rowHeight / 2, { baseline: 'middle', maxWidth: colWidths[1] });
-
-        currentRow++;
+      // Prepare table data
+      const tableData = [];
+      for (let i = 0; i < data.length; i += 2) {
+        tableData.push([
+          data[i]?.[0] || "",       // 1st column of 1st CSV row
+          data[i]?.[1] || "",       // 2nd column of 1st CSV row
+          data[i + 1]?.[0] || "",   // 1st column of 2nd CSV row
+          data[i + 1]?.[1] || ""    // 2nd column of 2nd CSV row
+        ]);
       }
 
-      // Save the PDF
-      pdf.save('output.pdf');
+      // Generate the table using autoTable
+      pdf.autoTable({
+        body: tableData, // Table data
+        startY: pageMargin,  // Start at 0 cm from the top
+        theme: 'grid',
+        styles: {
+          halign: 'center',  // Center align text horizontally
+          valign: 'middle',  // Center align text vertically
+          fontSize: fontSize,
+          cellPadding: cellMargin,
+          overflow: 'linebreak' // Enable text wrapping
+        },
+        columnStyles: {
+          0: { cellWidth: columnWidth, textColor: color1 }, // Set column width and text color
+          1: { cellWidth: columnWidth, textColor: color2 }, 
+          2: { cellWidth: columnWidth, textColor: color1 },
+          3: { cellWidth: columnWidth, textColor: color2 }
+        },
+        bodyStyles: {
+          minCellHeight: rowHeight // Fixed row height
+        },
+        pageBreak: 'auto',
+        margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
+      });
+
+      pdf.save('converted.pdf');
     }
   </script>
 </body>
