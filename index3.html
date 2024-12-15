@@ -125,11 +125,18 @@
 
         // Draw borders and add text
         if (cellText) {
-          pdf.rect(xPos, yPos, colWidth, rowHeight);
-          pdf.text(cellText, xPos + colWidth / 2, yPos + rowHeight / 2, {
+          pdf.rect(xPos, yPos, colWidth, rowHeight); // Draw the cell border
+
+          // Calculate text height and adjust for vertical centering
+          const cellTextHeight = pdf.getTextDimensions(cellText, {
+            maxWidth: colWidth - 5,
+            lineHeightFactor: 1.2
+          }).h;
+          const verticalOffset = (rowHeight - cellTextHeight) / 2;
+
+          pdf.text(cellText, xPos + colWidth / 2, yPos + verticalOffset, {
             maxWidth: colWidth - 5,
             align: 'center',
-            baseline: 'middle',
             lineHeightFactor: 1.2,
           });
         }
