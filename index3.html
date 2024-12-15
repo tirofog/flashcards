@@ -104,31 +104,28 @@
       const fontSize = 10;
 
       pdf.setFontSize(fontSize);
-      let currentCell = 0;
 
-      data.forEach((row, index) => {
-        if (index === 0) return; // Skip header row
+      let currentCell = 0; // Tracks the current cell (0 to 3 for four columns)
 
-        const cellText1 = row[0] || '';
-        const cellText2 = row[1] || '';
+      for (let i = 0; i < data.length; i++) {
+        if (i === 0) continue; // Skip header row
 
-        // Calculate the row and column positions
-        const cellRow = Math.floor(currentCell / 4) % rowsPerPage;
-        const cellCol = currentCell % 4;
+        const xPos = 10 + (currentCell % 4) * colWidth;
+        const yPos = 20 + Math.floor(currentCell / 4) * rowHeight;
 
-        const xPos = 10 + cellCol * colWidth;
-        const yPos = 20 + cellRow * rowHeight;
-
-        // Check if we need a new page
-        if (currentCell > 0 && currentCell % (rowsPerPage * 4) === 0) {
+        // Check for page overflow
+        if (yPos + rowHeight > pageHeight - 10) {
           pdf.addPage();
-          currentCell = 0;
+          currentCell = 0; // Reset to first cell on new page
         }
 
-        // Draw borders and add wrapped text
+        // Draw borders for the cell
         pdf.rect(xPos, yPos, colWidth, rowHeight);
 
-        const cellText = cellCol % 2 === 0 ? cellText1 : cellText2;
+        // Determine which text to fill
+        const cellText = currentCell % 2 === 0 ? data[Math.floor(currentCell / 2)][0] : data[Math.floor(currentCell / 2)][1];
+
+        // Add wrapped and centered text
         pdf.text(cellText, xPos + colWidth / 2, yPos + rowHeight / 2, {
           maxWidth: colWidth - 5,
           align: 'center',
@@ -137,7 +134,7 @@
         });
 
         currentCell++;
-      });
+      }
 
       pdf.save('converted.pdf');
     }
