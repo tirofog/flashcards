@@ -105,34 +105,39 @@
 
       pdf.setFontSize(fontSize);
 
-      let currentRow = 0; // Tracks the row in the CSV data
-      let currentCell = 0; // Tracks the cell position (0 to 3)
+      let currentCell = 0; // Tracks cell position (0 to 3 for 4 cells per row)
+      let currentRow = 0; // Tracks the current CSV row
 
       while (currentRow < data.length) {
-        // Check for page overflow
         const yPos = 20 + Math.floor(currentCell / 4) * rowHeight;
+
+        // Check for page overflow
         if (yPos + rowHeight > pageHeight - 10) {
           pdf.addPage();
-          currentCell = 0; // Reset cells for new page
+          currentCell = 0; // Reset cell for new page
         }
 
-        // Calculate x position and get data for each cell
+        // Calculate x position and determine which data to use
         const xPos = 10 + (currentCell % 4) * colWidth;
-        const cellText = currentCell % 2 === 0
-          ? data[Math.floor(currentRow / 2)][0] // First column of CSV
-          : data[Math.floor(currentRow / 2)][1]; // Second column of CSV
+        const cellText = currentCell % 4 < 2
+          ? data[currentRow][currentCell % 2] // First or second column of CSV
+          : data[currentRow + 1] && data[currentRow + 1][currentCell % 2]; // Second CSV row if available
 
         // Draw borders and add text
-        pdf.rect(xPos, yPos, colWidth, rowHeight);
-        pdf.text(cellText, xPos + colWidth / 2, yPos + rowHeight / 2, {
-          maxWidth: colWidth - 5,
-          align: 'center',
-          baseline: 'middle',
-          lineHeightFactor: 1.2,
-        });
+        if (cellText) {
+          pdf.rect(xPos, yPos, colWidth, rowHeight);
+          pdf.text(cellText, xPos + colWidth / 2, yPos + rowHeight / 2, {
+            maxWidth: colWidth - 5,
+            align: 'center',
+            baseline: 'middle',
+            lineHeightFactor: 1.2,
+          });
+        }
 
         currentCell++;
-        if (currentCell % 4 === 0) currentRow++; // Move to the next CSV row after 4 cells
+
+        // Move to the next CSV row after processing two cells
+        if (currentCell % 4 === 0) currentRow += 2;
       }
 
       pdf.save('converted.pdf');
