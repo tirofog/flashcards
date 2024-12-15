@@ -40,6 +40,14 @@
     button:hover {
       background-color: #0056b3;
     }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .row input {
+      flex: 1;
+    }
   </style>
 </head>
 <body>
@@ -52,6 +60,21 @@
     <label for="csvText">Or paste your CSV content here:</label>
     <textarea id="csvText" placeholder="e.g., een baviaan,a baboon\neen jachtluipaard,a cheetah\neen chimpansee,a chimpanzee\neen hert,a deer"></textarea>
 
+    <div class="row">
+      <label for="fontSize">Font Size:</label>
+      <input type="number" id="fontSize" value="10" min="5" max="20">
+    </div>
+
+    <div class="row">
+      <label for="fontColor13">Font Color (Columns 1 & 3):</label>
+      <input type="color" id="fontColor13" value="#000000">
+    </div>
+
+    <div class="row">
+      <label for="fontColor24">Font Color (Columns 2 & 4):</label>
+      <input type="color" id="fontColor24" value="#000000">
+    </div>
+
     <button id="generatePdf">Convert to PDF</button>
   </div>
 
@@ -59,6 +82,9 @@
     document.getElementById('generatePdf').addEventListener('click', () => {
       const fileInput = document.getElementById('csvFile');
       const csvText = document.getElementById('csvText').value.trim();
+      const fontSize = parseInt(document.getElementById('fontSize').value, 10);
+      const fontColor13 = document.getElementById('fontColor13').value;
+      const fontColor24 = document.getElementById('fontColor24').value;
 
       if (!fileInput.files.length && !csvText) {
         alert('Please upload a CSV file or paste CSV content.');
@@ -71,14 +97,14 @@
           complete: (results) => {
             const data = results.data;
             if (!validateCsvData(data)) return;
-            generatePDF(data);
+            generatePDF(data, fontSize, fontColor13, fontColor24);
           },
           error: () => alert('Error reading CSV file.')
         });
       } else if (csvText) {
         const data = Papa.parse(csvText, { delimiter: ',', skipEmptyLines: true }).data;
         if (!validateCsvData(data)) return;
-        generatePDF(data);
+        generatePDF(data, fontSize, fontColor13, fontColor24);
       }
     });
 
@@ -90,22 +116,21 @@
       return true;
     }
 
-    function generatePDF(data) {
+    function generatePDF(data, fontSize, fontColor13, fontColor24) {
       const { jsPDF } = window.jspdf;
 
       // Define the page size and margins in millimeters (mm)
       const pageWidth = 297; // A4 width in mm
       const pageHeight = 210; // A4 height in mm
-      const pageMargin = 0; // 0 cm margins
-      const cellMargin = 5; // 5 mm margins
+      const pageMargin = 10; // 1 cm margins
+      const cellMargin = 5; // 5 mm cell padding
       const usablePageWidth = pageWidth - 2 * pageMargin;
-      const usablePageHeight = pageHeight - 2 * pageMargin;
       const columnWidth = usablePageWidth / 4; // Divide usable width among 4 columns
-      const rowHeight = usablePageHeight / 4; // Fixed row height
+      const rowHeight = 10; // Fixed row height
 
       const pdf = new jsPDF({
-        unit: 'mm', // Set unit to millimeters
-        format: 'a4', // Set page format to A4
+        unit: 'mm',
+        format: 'a4',
         orientation: 'l' // landscape
       });
 
@@ -123,20 +148,18 @@
       // Generate the table using autoTable
       pdf.autoTable({
         body: tableData, // Table data
-        startY: pageMargin,  // Start at 0 cm from the top
+        startY: pageMargin,  // Start at 1 cm from the top
         theme: 'grid',
         styles: {
-          halign: 'center',  // Center align text horizontally
-          valign: 'middle',  // Center align text vertically
-          fontSize: 10,
+          fontSize: fontSize,
           cellPadding: cellMargin,
           overflow: 'linebreak' // Enable text wrapping
         },
         columnStyles: {
-          0: { cellWidth: columnWidth }, // Set column width
-          1: { cellWidth: columnWidth }, 
-          2: { cellWidth: columnWidth },
-          3: { cellWidth: columnWidth }
+          0: { cellWidth: columnWidth, textColor: fontColor13 }, // Columns 1 & 3 color
+          1: { cellWidth: columnWidth, textColor: fontColor24 }, // Columns 2 & 4 color
+          2: { cellWidth: columnWidth, textColor: fontColor13 },
+          3: { cellWidth: columnWidth, textColor: fontColor24 }
         },
         bodyStyles: {
           minCellHeight: rowHeight // Fixed row height
