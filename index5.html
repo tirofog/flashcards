@@ -109,6 +109,9 @@
         ]);
       }
 
+      // Set reasonable column widths (adjust as necessary)
+      const columnWidth = (210 - (2 * margin)) / 4; // Calculate column width based on A4 page size and margins
+
       // Generate the table using autoTable
       pdf.autoTable({
         body: tableData, // Table data
@@ -122,10 +125,10 @@
           overflow: 'linebreak' // Enable text wrapping
         },
         columnStyles: {
-          0: { cellWidth: 45 }, // Fixed width for Column 1
-          1: { cellWidth: 45 }, // Fixed width for Column 2
-          2: { cellWidth: 45 }, // Fixed width for Column 3
-          3: { cellWidth: 45 }, // Fixed width for Column 4
+          0: { cellWidth: columnWidth }, // Calculated width for Column 1
+          1: { cellWidth: columnWidth }, // Calculated width for Column 2
+          2: { cellWidth: columnWidth }, // Calculated width for Column 3
+          3: { cellWidth: columnWidth }, // Calculated width for Column 4
         },
         bodyStyles: {
           minCellHeight: 20 // Fixed row height
