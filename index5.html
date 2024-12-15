@@ -64,6 +64,13 @@
       <option value="24">24</option>
     </select>
 
+    <label for="delimiter">Select CSV delimiter</label>
+    <select id="delimiter">
+      <option value="\t" selected>Tab</option>
+      <option value=",">Comma</option>
+      <option value=";">Semicolon</option>
+    </select>
+
     <label for="color1">Select Font Color for Columns 1 and 3:</label>
     <!--<input type="color" id="color1" value="#000000">-->
     <select id="color1">
@@ -108,7 +115,8 @@
           error: () => alert('Error reading CSV file.')
         });
       } else if (csvText) {
-        const data = Papa.parse(csvText, { delimiter: ',', skipEmptyLines: true }).data;
+        const delimiter = parseInt(document.getElementById('delimiter').value);
+        const data = Papa.parse(csvText, { delimiter: delimiter, skipEmptyLines: true }).data;
         if (!validateCsvData(data)) return;
         generatePDF(data);
       }
