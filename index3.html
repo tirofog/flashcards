@@ -49,7 +49,7 @@
     <input type="file" id="csvFile" accept=".csv">
 
     <label for="csvText">Or paste your CSV content here:</label>
-    <textarea id="csvText" placeholder="e.g., Name,Age\nJohn,25\nJane,30"></textarea>
+    <textarea id="csvText" placeholder="e.g., een baviaan,a baboon\neen jachtluipaard,a cheetah\neen chimpansee,a chimpanzee\neen hert,a deer"></textarea>
 
     <label for="rowsPerPage">Number of rows per page:</label>
     <input type="number" id="rowsPerPage" min="1" value="10">
@@ -69,7 +69,6 @@
       }
 
       if (fileInput.files.length) {
-        // Process uploaded file
         const file = fileInput.files[0];
         Papa.parse(file, {
           complete: (results) => {
@@ -80,7 +79,6 @@
           error: () => alert('Error reading CSV file.')
         });
       } else if (csvText) {
-        // Process pasted text
         const data = Papa.parse(csvText, { delimiter: ',', skipEmptyLines: true }).data;
         if (!validateCsvData(data)) return;
         generatePDF(data, rowsPerPage);
@@ -102,11 +100,11 @@
       const pageHeight = pdf.internal.pageSize.getHeight();
 
       const colWidth = (pageWidth - 20) / 4; // Four columns
-      const rowHeight = pageHeight / rowsPerPage - 5;
+      const rowHeight = (pageHeight - 20) / rowsPerPage;
       const fontSize = 10;
 
       pdf.setFontSize(fontSize);
-      let currentRow = 0;
+      let currentCell = 0;
 
       data.forEach((row, index) => {
         if (index === 0) return; // Skip header row
@@ -114,28 +112,31 @@
         const cellText1 = row[0] || '';
         const cellText2 = row[1] || '';
 
-        const yPos = Math.floor(currentRow / 4) % rowsPerPage * rowHeight + 20;
-        const colIndex = currentRow % 4;
-        const xPos = colIndex * colWidth + 10;
+        // Calculate the row and column positions
+        const cellRow = Math.floor(currentCell / 4) % rowsPerPage;
+        const cellCol = currentCell % 4;
 
-        if (currentRow > 0 && currentRow % (rowsPerPage * 4) === 0) {
+        const xPos = 10 + cellCol * colWidth;
+        const yPos = 20 + cellRow * rowHeight;
+
+        // Check if we need a new page
+        if (currentCell > 0 && currentCell % (rowsPerPage * 4) === 0) {
           pdf.addPage();
-          currentRow = 0;
+          currentCell = 0;
         }
 
-        // Draw cell borders
-        pdf.rect(xPos, yPos - rowHeight + 5, colWidth, rowHeight);
+        // Draw borders and add wrapped text
+        pdf.rect(xPos, yPos, colWidth, rowHeight);
 
-        // Add wrapped and centered text in the cell
-        const cellText = colIndex % 2 === 0 ? cellText1 : cellText2;
-        pdf.text(cellText, xPos + colWidth / 2, yPos - rowHeight + 5 + rowHeight / 2, {
+        const cellText = cellCol % 2 === 0 ? cellText1 : cellText2;
+        pdf.text(cellText, xPos + colWidth / 2, yPos + rowHeight / 2, {
           maxWidth: colWidth - 5,
           align: 'center',
-          lineHeightFactor: 1.2,
           baseline: 'middle',
+          lineHeightFactor: 1.2,
         });
 
-        currentRow++;
+        currentCell++;
       });
 
       pdf.save('converted.pdf');
