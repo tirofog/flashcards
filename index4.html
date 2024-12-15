@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CSV to PDF with autoTable</title>
+  <title>CSV to PDF with Fixed Table</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -44,16 +44,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>CSV to PDF with autoTable</h1>
+    <h1>CSV to PDF</h1>
 
     <label for="csvFile">Upload your CSV file:</label>
     <input type="file" id="csvFile" accept=".csv">
 
     <label for="csvText">Or paste your CSV content here:</label>
     <textarea id="csvText" placeholder="e.g., een baviaan,a baboon\neen jachtluipaard,a cheetah\neen chimpansee,a chimpanzee\neen hert,a deer"></textarea>
-
-    <label for="rowsPerPage">Number of rows per page:</label>
-    <input type="number" id="rowsPerPage" min="1" value="10">
 
     <button id="generatePdf">Convert to PDF</button>
   </div>
@@ -97,7 +94,7 @@
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF();
 
-      // Convert CSV data into the format needed for autoTable
+      // Prepare table data
       const tableData = [];
       for (let i = 0; i < data.length; i += 2) {
         tableData.push([
@@ -108,10 +105,9 @@
         ]);
       }
 
-      // Use autoTable to generate the table
+      // Generate the table using autoTable
       pdf.autoTable({
-        head: [['Column 1', 'Column 2', 'Column 3', 'Column 4']],
-        body: tableData,
+        body: tableData, // Table data
         startY: 20,
         theme: 'grid',
         styles: {
@@ -121,11 +117,15 @@
           cellPadding: 3,
         },
         columnStyles: {
-          0: { cellWidth: 'auto' }, // Auto-width for column 1
-          1: { cellWidth: 'auto' }, // Auto-width for column 2
-          2: { cellWidth: 'auto' }, // Auto-width for column 3
-          3: { cellWidth: 'auto' }, // Auto-width for column 4
-        }
+          0: { cellWidth: 45 }, // Fixed width for Column 1
+          1: { cellWidth: 45 }, // Fixed width for Column 2
+          2: { cellWidth: 45 }, // Fixed width for Column 3
+          3: { cellWidth: 45 }, // Fixed width for Column 4
+        },
+        bodyStyles: {
+          minCellHeight: 20 // Fixed row height
+        },
+        pageBreak: 'auto'
       });
 
       pdf.save('converted.pdf');
