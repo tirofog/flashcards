@@ -92,13 +92,11 @@
 
     function generatePDF(data) {
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF();
-
-      // Set page size to A4 and margins to 1 cm (28.35 points)
       const margin = 28.35;  // 1 cm in points
-      const pageWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      pdf.setPageSize([pageWidth, pageHeight]);
+      const pdf = new jsPDF({
+        unit: 'pt', // Using points as the unit
+        format: 'a4', // Set the page format to A4
+      });
 
       // Prepare table data
       const tableData = [];
