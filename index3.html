@@ -111,8 +111,8 @@
       data.forEach((row, index) => {
         if (index === 0) return; // Skip header row
 
-        const cellText1 = wrapText(pdf, row[0] || '', colWidth - 5, fontSize);
-        const cellText2 = wrapText(pdf, row[1] || '', colWidth - 5, fontSize);
+        const cellText1 = row[0] || '';
+        const cellText2 = row[1] || '';
 
         const yPos = Math.floor(currentRow / 2) % rowsPerPage * rowHeight + 20;
         const col1X = (currentRow % 4) * colWidth + 10;
@@ -127,38 +127,24 @@
         pdf.rect(col1X, yPos - rowHeight + 5, colWidth, rowHeight);
         pdf.rect(col2X, yPos - rowHeight + 5, colWidth, rowHeight);
 
-        // Add centered text in the cells
-        centerText(pdf, cellText1, col1X, yPos - rowHeight + 5, colWidth, rowHeight, fontSize);
-        centerText(pdf, cellText2, col2X, yPos - rowHeight + 5, colWidth, rowHeight, fontSize);
+        // Add wrapped and centered text in the cells
+        pdf.text(cellText1, col1X + colWidth / 2, yPos - rowHeight + 5 + rowHeight / 2, {
+          maxWidth: colWidth - 5,
+          align: 'center',
+          lineHeightFactor: 1.2,
+          baseline: 'middle',
+        });
+        pdf.text(cellText2, col2X + colWidth / 2, yPos - rowHeight + 5 + rowHeight / 2, {
+          maxWidth: colWidth - 5,
+          align: 'center',
+          lineHeightFactor: 1.2,
+          baseline: 'middle',
+        });
 
         currentRow++;
       });
 
       pdf.save('converted.pdf');
-    }
-
-    function wrapText(pdf, text, maxWidth, fontSize) {
-      const charWidth = fontSize * 0.55; // Approximation of average char width
-      const maxCharsPerLine = Math.floor(maxWidth / charWidth);
-      const lines = [];
-      while (text.length > 0) {
-        const line = text.substring(0, maxCharsPerLine);
-        lines.push(line);
-        text = text.substring(maxCharsPerLine);
-      }
-      return lines;
-    }
-
-    function centerText(pdf, textLines, x, y, cellWidth, cellHeight, fontSize) {
-      const lineHeight = fontSize * 1.2;
-      const totalTextHeight = textLines.length * lineHeight;
-      const startY = y + (cellHeight - totalTextHeight) / 2 + fontSize;
-
-      textLines.forEach((line, i) => {
-        const textWidth = pdf.getTextWidth(line);
-        const textX = x + (cellWidth - textWidth) / 2;
-        pdf.text(line, textX, startY + i * lineHeight);
-      });
     }
   </script>
 </body>
