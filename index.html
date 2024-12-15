@@ -50,7 +50,7 @@
     <input type="file" id="csvFile" accept=".csv">
 
     <label for="csvText">Or paste your CSV content (e.g. from Quizlet export) here:</label>
-    <textarea id="csvText" placeholder="e.g., een baviaan,a baboon\neen jachtluipaard,a cheetah\neen chimpansee,a chimpanzee\neen hert,a deer"></textarea>
+    <textarea id="csvText" placeholder="e.g., een baviaan,a baboon&#10;een jachtluipaard,a cheetah&#10;een chimpansee,a chimpanzee&#10;een hert,a deer"></textarea>
 
     <label for="fontSize">Select Font Size:</label>
     <select id="fontSize">
@@ -90,7 +90,10 @@
       <option value="#008000">Green</option>
       <option value="#FFA500">Orange</option>
     </select>
-    
+
+    <label for="filename">Specify PDF Filename (optional):</label>
+    <input type="text" id="filename" placeholder="Enter filename without extension">
+
     <button id="generatePdf">Convert to PDF</button>
   </div>
 
@@ -148,6 +151,11 @@
       const color1 = document.getElementById('color1').value;
       const color2 = document.getElementById('color2').value;
 
+      // Define PDF filename
+      const filenameInput = document.getElementById('filename').value.trim();
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      const filename = filenameInput || `flashcards-${timestamp}.pdf`;
+
       const pdf = new jsPDF({
         unit: 'mm', // Set unit to millimeters
         format: 'a4', // Set page format to A4
@@ -190,7 +198,7 @@
         margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
       });
 
-      pdf.save('flashcards.pdf');
+      pdf.save(filename);
     }
   </script>
 </body>
