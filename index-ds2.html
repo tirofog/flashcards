@@ -160,29 +160,25 @@ function generatePDF(data) {
   });
 
   const chunkSize = 16;
-  const chunks = [];
   for (let i = 0; i < data.length; i += chunkSize) {
-    chunks.push(data.slice(i, i + chunkSize));
-  }
+    const chunk = data.slice(i, i + chunkSize);
 
-  let pageCount = 1;
-  chunks.forEach(chunk => {
     const front = [];
     const back = [];
 
-    for (let i = 0; i < 4; i++) {
-      const rowFront = [];
-      const rowBack = [];
-      for (let j = 0; j < 4; j++) {
-        const index = i * 4 + j;
-        rowFront.push(chunk[index]?.[0] || "");
-        rowBack.unshift(chunk[index]?.[1] || ""); // reverse order in row
+    for (let row = 0; row < 4; row++) {
+      const frontRow = [];
+      const backRow = [];
+      for (let col = 0; col < 4; col++) {
+        const index = row * 4 + col;
+        frontRow.push(chunk[index]?.[0] || "");                          // Front: term
+        backRow.unshift(chunk[index]?.[1] || ""); // Back: mirrored answers
       }
-      front.push(rowFront);
-      back.unshift(rowBack); // reverse row order
+      front.push(frontRow);
+      back.push(backRow);
     }
 
-    // Page for fronts
+    // Page 1: front side
     pdf.autoTable({
       body: front,
       startY: pageMargin,
@@ -208,8 +204,9 @@ function generatePDF(data) {
       margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
     });
 
-    // Page for backs
-    if (pageCount < chunks.length * 2) pdf.addPage();
+    pdf.addPage();
+
+    // Page 2: back side
     pdf.autoTable({
       body: back,
       startY: pageMargin,
@@ -235,9 +232,11 @@ function generatePDF(data) {
       margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
     });
 
-    if (pageCount < chunks.length * 2 - 1) pdf.addPage();
-    pageCount += 2;
-  });
+    // No extra page break needed unless more cards
+    if (i + chunkSize < data.length) {
+      pdf.addPage();
+    }
+  }
 
   pdf.save(filename);
 }
