@@ -116,6 +116,7 @@
         return;
       }
 
+
       const parseOptions = {
         delimiter: document.getElementById('delimiter').value,
         skipEmptyLines: true,
@@ -134,13 +135,7 @@
       if (fileInput.files.length) {
         Papa.parse(fileInput.files[0], parseOptions);
       } else {
-        const data = Papa.parse(csvText, parseOptions).data;
-        if (!validateCsvData(data)) return;
-        if (isDoubleSided) {
-          generatePDF_DoubleSided(data);
-        } else {
-          generatePDF_SingleSided(data);
-        }
+        Papa.parse(csvText, parseOptions); // Only call Papa.parse and let the callback handle everything
       }
     });
     
@@ -171,6 +166,8 @@ function generatePDF_DoubleSided(data) {
 
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'l' });
 
+  console.log("entering double-sided");
+  console.log(data);
   for (let i = 0; i < data.length; i += 16) {
     const chunk = data.slice(i, i + 16);
     const front = [], back = [];
@@ -192,12 +189,15 @@ function generatePDF_DoubleSided(data) {
           return {
             content: cellText,
             styles: {
-              valign: 'top',
+              valign: 'middle',
               halign: 'center'
             },
             didDrawCell: function (data) {
+                  console.log(data);
               const chapterLabel = document.getElementById('chapterLabel').value.trim();
               if (chapterLabel) {
+                  console.log("processing chapterLabel in cell");
+                  console.log(chapterLabel);
                 const { cell } = data;
                 pdf.setFontSize(fontSize - 3);
                 pdf.setTextColor(color1);
@@ -263,6 +263,8 @@ function generatePDF_SingleSided(data) {
 
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'l' });
 
+  console.log("entering single-sided");
+  console.log(data);
   // Create front/back card pairs
   let tableData = [];
   for (let i = 0; i < data.length; i++) {
