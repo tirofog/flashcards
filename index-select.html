@@ -101,7 +101,7 @@
 
     <label for="chapterLabel">Card Set label (optional):</label>
     <input type="text" id="chapterLabel" placeholder="e.g. Chapter 3 - Fractions">
-    
+
     <button id="generatePdf">Convert to PDF</button>
   </div>
 
@@ -110,35 +110,41 @@
       const fileInput = document.getElementById('csvFile');
       const csvText = document.getElementById('csvText').value.trim();
       const isDoubleSided = document.getElementById('doubleSided').checked;
+        console.log("isDoubleSided=" + isDoubleSided);
+      const chapterLabel = document.getElementById('chapterLabel').value.trim();
+        console.log("chapterLabel=" + chapterLabel);
 
       if (!fileInput.files.length && !csvText) {
         alert('Please upload a CSV file or paste CSV content.');
         return;
       }
 
-
-      const parseOptions = {
-        delimiter: document.getElementById('delimiter').value,
-        skipEmptyLines: true,
-        complete: (results) => {
-          const data = results.data;
-          if (!validateCsvData(data)) return;
-          if (isDoubleSided) {
-            generatePDF_DoubleSided(data);
-          } else {
-            generatePDF_SingleSided(data);
-          }
-        },
-        error: () => alert('Error reading CSV file.')
-      };
-
       if (fileInput.files.length) {
-        Papa.parse(fileInput.files[0], parseOptions);
-      } else {
-        Papa.parse(csvText, parseOptions); // Only call Papa.parse and let the callback handle everything
+        const file = fileInput.files[0];
+        Papa.parse(file, {
+          complete: (results) => {
+            const data = results.data;
+            if (!validateCsvData(data)) return;
+              if (isDoubleSided) {
+                generatePDFDoubleSided(data);
+              } else {
+                generatePDFSingleSided(data);
+              }
+          },
+          error: () => alert('Error reading CSV file.')
+        });
+      } else if (csvText) {
+        const delimiter = parseInt(document.getElementById('delimiter').value);
+        const data = Papa.parse(csvText, { delimiter: delimiter, skipEmptyLines: true }).data;
+        if (!validateCsvData(data)) return;
+        if (isDoubleSided) {
+          generatePDFDoubleSided(data);
+        } else {
+          generatePDFSingleSided(data);
+        }
       }
     });
-    
+
     function validateCsvData(data) {
       if (data.length < 2 || data[0].length !== 2) {
         alert('The CSV data must have exactly two columns.');
@@ -147,303 +153,221 @@
       return true;
     }
 
-function generatePDF_DoubleSided(data) {
-  const { jsPDF } = window.jspdf;
+    function generatePDFSingleSided(data) {
+      // print the flashcards single-sided
+      console.log("Single-sided")
+      const { jsPDF } = window.jspdf;
 
-  const pageWidth = 297, pageHeight = 210, pageMargin = 0, cellMargin = 5;
-  const usablePageWidth = pageWidth - 2 * pageMargin;
-  const usablePageHeight = pageHeight - 2 * pageMargin;
-  const columnWidth = usablePageWidth / 4;
-  const rowHeight = usablePageHeight / 4;
+      // Define the page size and margins in millimeters (mm)
+      const pageWidth = 297; // A4 width in mm
+      const pageHeight = 210; // A4 height in mm
+      const pageMargin = 0; // 0 cm margins
+      const cellMargin = 5; // 5 mm margins
+      const usablePageWidth = pageWidth - 2 * pageMargin;
+      const usablePageHeight = pageHeight - 2 * pageMargin;
+      const columnWidth = usablePageWidth / 4; // Divide usable width among 4 columns
+      const rowHeight = usablePageHeight / 4; // Fixed row height
 
-  const fontSize = parseInt(document.getElementById('fontSize').value);
-  const color1 = document.getElementById('color1').value;
-  const color2 = document.getElementById('color2').value;
+      // Define font size and colors
+      const fontSize = parseInt(document.getElementById('fontSize').value);
+      const color1 = document.getElementById('color1').value;
+      const color2 = document.getElementById('color2').value;
 
-  const filenameInput = document.getElementById('filename').value.trim();
-  const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-  const filename = filenameInput || `flashcards-${timestamp}.pdf`;
+      // Define PDF filename
+      const filenameInput = document.getElementById('filename').value.trim();
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      const filename = filenameInput || `flashcards-${timestamp}.pdf`;
 
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'l' });
+      const pdf = new jsPDF({
+        unit: 'mm', // Set unit to millimeters
+        format: 'a4', // Set page format to A4
+        orientation: 'l' // landscape
+      });
 
-  console.log("entering double-sided");
-  console.log(data);
-  for (let i = 0; i < data.length; i += 16) {
-    const chunk = data.slice(i, i + 16);
-    const front = [], back = [];
+      pdf.addFont("https://cdn.jsdelivr.net/npm/@vintproykt/dejavu-fonts-ttf@2.37.0/ttf/DejaVuSans.ttf", "DejaVuSans", "normal");
+      pdf.setFont("DejaVuSans", "normal");
 
-    for (let row = 0; row < 4; row++) {
-      const frontRow = [], backRow = [];
-      for (let col = 0; col < 4; col++) {
-        const index = row * 4 + col;
-        frontRow.push(chunk[index]?.[0] || "");
-        backRow.unshift(chunk[index]?.[1] || "");
+      // pdf.addFont("https://cdn.jsdelivr.net/npm/open-sans-fonts@1.6.2/open-sans/Regular/OpenSans-Regular.ttf", "OpenSans", "normal");
+      // pdf.setFont("OpenSans", "normal");
+
+      //pdf.addFileToVFS('OpenSans-Regular-normal.ttf', openSansFont);
+      //pdf.addFont('OpenSans-Regular-normal.ttf', 'OpenSans-Regular', 'normal');
+      //pdf.setFont("OpenSans-Regular", "normal");
+
+      //console.log("FontList=");
+      //console.log(pdf.getFontList());
+      //console.log("Font=");
+      //console.log(pdf.getFont());
+
+      // Prepare table data
+      const tableData = [];
+      for (let i = 0; i < data.length; i += 2) {
+        tableData.push([
+          data[i]?.[0] || "",       // 1st column of 1st CSV row
+          data[i]?.[1] || "",       // 2nd column of 1st CSV row
+          data[i + 1]?.[0] || "",   // 1st column of 2nd CSV row
+          data[i + 1]?.[1] || ""    // 2nd column of 2nd CSV row
+        ]);
       }
-      front.push(frontRow);
-      back.push(backRow);
+
+      // Generate the table using autoTable
+      pdf.autoTable({
+        body: tableData, // Table data
+        startY: pageMargin,  // Start at 0 cm from the top
+        theme: 'grid',
+        styles: {
+          halign: 'center',  // Center align text horizontally
+          valign: 'middle',  // Center align text vertically
+          font: 'DejaVuSans',
+          fontSize: fontSize,
+          fontStyle: 'normal',
+          cellPadding: cellMargin,
+          overflow: 'linebreak' // Enable text wrapping
+        },
+        columnStyles: {
+          0: { cellWidth: columnWidth, textColor: color1 }, // Set column width and text color
+          1: { cellWidth: columnWidth, textColor: color2 }, 
+          2: { cellWidth: columnWidth, textColor: color1 },
+          3: { cellWidth: columnWidth, textColor: color2 }
+        },
+        bodyStyles: {
+          minCellHeight: rowHeight // Fixed row height
+        },
+        pageBreak: 'auto',
+        margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
+      });
+
+      pdf.save(filename);
     }
 
-    pdf.autoTable({
-      body: front.map((row, rowIndex) =>
-        row.map((cellText, colIndex) => {
-          return {
-            content: cellText,
-            styles: {
-              valign: 'middle',
-              halign: 'center'
-            },
-            didDrawCell: function (data) {
-                  console.log(data);
-              const chapterLabel = document.getElementById('chapterLabel').value.trim();
-              if (chapterLabel) {
-                  console.log("processing chapterLabel in cell");
-                  console.log(chapterLabel);
-                const { cell } = data;
-                pdf.setFontSize(fontSize - 3);
-                pdf.setTextColor(color1);
-                pdf.text(
-                  chapterLabel,
-                  cell.x + cell.width - 2,
-                  cell.y + cell.height - 2,
-                  { align: 'right' }
-                );
-                pdf.setFontSize(fontSize); // Reset font size
-              }
-            }
-          };
-        })
-      ),
-      startY: pageMargin,
-      theme: 'grid',
-      styles: {
-        halign: 'center', valign: 'middle',
-        fontSize: fontSize, cellPadding: cellMargin,
-        lineColor: 0, textColor: color1, overflow: 'linebreak'
-      },
-      columnStyles: { 0: { cellWidth: columnWidth }, 1: {}, 2: {}, 3: {} },
-      bodyStyles: { minCellHeight: rowHeight },
-      margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
-    });
+    function generatePDFDoubleSided(data) {
+      // print the flashcards recto-verso
+      console.log("Double-sided")
+      const { jsPDF } = window.jspdf;
 
-    pdf.addPage();
+      const pageWidth = 297;
+      const pageHeight = 210;
+      const pageMargin = 0;
+      const cellMargin = 5;
+      const usablePageWidth = pageWidth - 2 * pageMargin;
+      const usablePageHeight = pageHeight - 2 * pageMargin;
+      const columnWidth = usablePageWidth / 4;
+      const rowHeight = usablePageHeight / 4;
 
-    pdf.autoTable({
-      body: back,
-      startY: pageMargin,
-      theme: 'grid',
-      styles: {
-        halign: 'center', valign: 'middle',
-        fontSize: fontSize, cellPadding: cellMargin,
-        lineColor: 0, textColor: color2, overflow: 'linebreak'
-      },
-      columnStyles: { 0: { cellWidth: columnWidth }, 1: {}, 2: {}, 3: {} },
-      bodyStyles: { minCellHeight: rowHeight },
-      margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
-    });
+      const fontSize = parseInt(document.getElementById('fontSize').value);
+      const color1 = document.getElementById('color1').value;
+      const color2 = document.getElementById('color2').value;
 
-    if (i + 16 < data.length) pdf.addPage();
-  }
+      const filenameInput = document.getElementById('filename').value.trim();
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      const filename = filenameInput || `flashcards-${timestamp}.pdf`;
 
-  pdf.save(filename);
-}
+      const pdf = new jsPDF({
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'l'
+      });
 
-function generatePDF_SingleSided(data) {
-  const { jsPDF } = window.jspdf;
+      pdf.addFont("https://cdn.jsdelivr.net/npm/@vintproykt/dejavu-fonts-ttf@2.37.0/ttf/DejaVuSans.ttf", "DejaVuSans", "normal");
+      pdf.setFont("DejaVuSans", "normal");      
 
-  const pageWidth = 297; // A4 landscape
-  const pageHeight = 210;
-  const cellMargin = 5;
-  const fontSize = parseInt(document.getElementById('fontSize').value);
-  const color1 = document.getElementById('color1').value;
-  const color2 = document.getElementById('color2').value;
-  const chapterLabel = document.getElementById('chapterLabel').value.trim();
-  const filenameInput = document.getElementById('filename').value.trim();
-  const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-  const filename = filenameInput || `flashcards-${timestamp}.pdf`;
+      // pdf.addFont("https://cdn.jsdelivr.net/npm/open-sans-fonts@1.6.2/open-sans/Regular/OpenSans-Regular.ttf", "OpenSans", "normal");
+      // pdf.setFont("OpenSans", "normal");
 
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'l' });
+      //pdf.addFileToVFS('OpenSans-Regular-normal.ttf', openSansFont);
+      //pdf.addFont('OpenSans-Regular-normal.ttf', 'OpenSans-Regular', 'normal');
+      //pdf.setFont("OpenSans-Regular", "normal");
 
-  console.log("entering single-sided");
-  console.log(data);
-  // Create front/back card pairs
-  let tableData = [];
-  for (let i = 0; i < data.length; i++) {
-    const front = data[i][0] || '';
-    const back = data[i][1] || '';
-    tableData.push([front, back]);
-  }
+      //console.log("FontList=");
+      //console.log(pdf.getFontList());
+      //console.log("Font=");
+      //console.log(pdf.getFont());
 
-  // Build rows of format: f1, b1, f2, b2
-  const rows = [];
-  for (let i = 0; i < tableData.length; i += 2) {
-    const row = [
-      tableData[i]?.[0] || '',  // f1
-      tableData[i]?.[1] || '',  // b1
-      tableData[i + 1]?.[0] || '',  // f2
-      tableData[i + 1]?.[1] || ''   // b2
-    ];
-    rows.push(row);
-  }
+      const chunkSize = 16;
+      for (let i = 0; i < data.length; i += chunkSize) {
+        const chunk = data.slice(i, i + chunkSize);
 
-  // Each page holds 4 rows (8 cards = 4 fronts + 4 backs)
-  for (let pageIndex = 0; pageIndex < rows.length; pageIndex += 4) {
-    if (pageIndex > 0) pdf.addPage();
+        const front = [];
+        const back = [];
 
-    const chunk = rows.slice(pageIndex, pageIndex + 4);
-
-    pdf.autoTable({
-      body: chunk.map(row =>
-        row.map((text, colIdx) => ({
-          content: text,
-          styles: {
-            fontSize,
-            valign: 'middle',
-            halign: 'center',
-            textColor: colIdx % 2 === 0 ? color1 : color2
-          },
-          didDrawCell: function (data) {
-            if (colIdx % 2 === 0 && chapterLabel) {
-              const { cell } = data;
-              pdf.setFontSize(fontSize - 3);
-              pdf.setTextColor(color1);
-              pdf.text(
-                chapterLabel,
-                cell.x + cell.width - 2,
-                cell.y + cell.height - 2,
-                { align: 'right' }
-              );
-              pdf.setFontSize(fontSize);
-            }
+        for (let row = 0; row < 4; row++) {
+          const frontRow = [];
+          const backRow = [];
+          for (let col = 0; col < 4; col++) {
+            const index = row * 4 + col;
+            frontRow.push(chunk[index]?.[0] || "");   // Front: term
+            backRow.unshift(chunk[index]?.[1] || ""); // Back: mirrored answers
           }
-        }))
-      ),
-      startY: 0,
-      theme: 'grid',
-      styles: {
-        cellPadding: cellMargin,
-        minCellHeight: (pageHeight / 4),
-        overflow: 'linebreak',
-      },
-      columnStyles: {
-        0: { cellWidth: pageWidth / 4 },
-        1: { cellWidth: pageWidth / 4 },
-        2: { cellWidth: pageWidth / 4 },
-        3: { cellWidth: pageWidth / 4 }
-      },
-      margin: { top: 0, left: 0, right: 0, bottom: 0 },
-    });
-  }
+          front.push(frontRow);
+          back.push(backRow);
+        }
 
-  pdf.save(filename);
-}
+        // Page 1: front side
+        pdf.autoTable({
+          body: front,
+          startY: pageMargin,
+          theme: 'grid',
+          styles: {
+            halign: 'center',
+            valign: 'middle',
+            font: 'DejaVuSans',
+            fontSize: fontSize,
+            fontStyle: 'normal',
+            cellPadding: cellMargin,
+            lineColor: 0,
+            textColor: color1,
+            overflow: 'linebreak'
+          },
+          columnStyles: {
+            0: { cellWidth: columnWidth },
+            1: { cellWidth: columnWidth },
+            2: { cellWidth: columnWidth },
+            3: { cellWidth: columnWidth }
+          },
+          bodyStyles: {
+            minCellHeight: rowHeight
+          },
+          margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
+        });
 
-function generatePDF(data) {
-  const { jsPDF } = window.jspdf;
+        pdf.addPage();
 
-  const pageWidth = 297;
-  const pageHeight = 210;
-  const pageMargin = 0;
-  const cellMargin = 5;
-  const usablePageWidth = pageWidth - 2 * pageMargin;
-  const usablePageHeight = pageHeight - 2 * pageMargin;
-  const columnWidth = usablePageWidth / 4;
-  const rowHeight = usablePageHeight / 4;
+        // Page 2: back side
+        pdf.autoTable({
+          body: back,
+          startY: pageMargin,
+          theme: 'grid',
+          styles: {
+            halign: 'center',
+            valign: 'middle',
+            font: 'DejaVuSans',
+            fontSize: fontSize,
+            fontStyle: 'normal',
+            cellPadding: cellMargin,
+            lineColor: 0,
+            textColor: color2,
+            overflow: 'linebreak'
+          },
+          columnStyles: {
+            0: { cellWidth: columnWidth },
+            1: { cellWidth: columnWidth },
+            2: { cellWidth: columnWidth },
+            3: { cellWidth: columnWidth }
+          },
+          bodyStyles: {
+            minCellHeight: rowHeight
+          },
+          margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
+        });
 
-  const fontSize = parseInt(document.getElementById('fontSize').value);
-  const color1 = document.getElementById('color1').value;
-  const color2 = document.getElementById('color2').value;
-
-  const filenameInput = document.getElementById('filename').value.trim();
-  const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-  const filename = filenameInput || `flashcards-${timestamp}.pdf`;
-
-  const pdf = new jsPDF({
-    unit: 'mm',
-    format: 'a4',
-    orientation: 'l'
-  });
-
-  const chunkSize = 16;
-  for (let i = 0; i < data.length; i += chunkSize) {
-    const chunk = data.slice(i, i + chunkSize);
-
-    const front = [];
-    const back = [];
-
-    for (let row = 0; row < 4; row++) {
-      const frontRow = [];
-      const backRow = [];
-      for (let col = 0; col < 4; col++) {
-        const index = row * 4 + col;
-        frontRow.push(chunk[index]?.[0] || "");                          // Front: term
-        backRow.unshift(chunk[index]?.[1] || ""); // Back: mirrored answers
+        // No extra page break needed unless more cards
+        if (i + chunkSize < data.length) {
+          pdf.addPage();
+        }
       }
-      front.push(frontRow);
-      back.push(backRow);
+
+      pdf.save(filename);
     }
-
-    // Page 1: front side
-    pdf.autoTable({
-      body: front,
-      startY: pageMargin,
-      theme: 'grid',
-      styles: {
-        halign: 'center',
-        valign: 'middle',
-        fontSize: fontSize,
-        cellPadding: cellMargin,
-        lineColor: 0,
-        textColor: color1,
-        overflow: 'linebreak'
-      },
-      columnStyles: {
-        0: { cellWidth: columnWidth },
-        1: { cellWidth: columnWidth },
-        2: { cellWidth: columnWidth },
-        3: { cellWidth: columnWidth }
-      },
-      bodyStyles: {
-        minCellHeight: rowHeight
-      },
-      margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
-    });
-
-    pdf.addPage();
-
-    // Page 2: back side
-    pdf.autoTable({
-      body: back,
-      startY: pageMargin,
-      theme: 'grid',
-      styles: {
-        halign: 'center',
-        valign: 'middle',
-        fontSize: fontSize,
-        cellPadding: cellMargin,
-        lineColor: 0,
-        textColor: color2,
-        overflow: 'linebreak'
-      },
-      columnStyles: {
-        0: { cellWidth: columnWidth },
-        1: { cellWidth: columnWidth },
-        2: { cellWidth: columnWidth },
-        3: { cellWidth: columnWidth }
-      },
-      bodyStyles: {
-        minCellHeight: rowHeight
-      },
-      margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
-    });
-
-    // No extra page break needed unless more cards
-    if (i + chunkSize < data.length) {
-      pdf.addPage();
-    }
-  }
-
-  pdf.save(filename);
-}
 </script>
 </body>
 </html>
