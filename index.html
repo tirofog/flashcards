@@ -113,6 +113,8 @@
         console.log("isDoubleSided=" + isDoubleSided);
       const chapterLabel = document.getElementById('chapterLabel').value.trim();
         console.log("chapterLabel=" + chapterLabel);
+        console.log(typeof(chapterLabel));
+              console.log(typeof chapterLabel, chapterLabel);
 
       if (!fileInput.files.length && !csvText) {
         alert('Please upload a CSV file or paste CSV content.');
@@ -234,7 +236,22 @@
           minCellHeight: rowHeight // Fixed row height
         },
         pageBreak: 'auto',
-        margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
+        margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin },
+        didDrawCell: function (mydata) {
+          console.log("in didDrawCell");
+          const { cell, column, doc } = mydata;
+          if (mydata.section === 'body' && column.index % 2 > 0) {
+            // Add your extra text
+            const extraText = chapterLabel.value.trim();
+
+            doc.setFontSize(8);
+            // Calculate position in bottom-right corner
+            const x = cell.x + cell.width - doc.getTextWidth(extraText) - 2;
+            const y = cell.y + cell.height - 2;
+
+            doc.text(extraText, x, y);
+          }
+        }
       });
 
       pdf.save(filename);
@@ -357,7 +374,22 @@
           bodyStyles: {
             minCellHeight: rowHeight
           },
-          margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
+          margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin },
+          didDrawCell: function (mydata) {
+            console.log("in didDrawCell");
+            const { cell, doc } = mydata;
+            if (mydata.section === 'body') {
+              // Add your extra text
+              const extraText = chapterLabel.value.trim();
+
+              doc.setFontSize(8);
+              // Calculate position in bottom-right corner
+              const x = cell.x + cell.width - doc.getTextWidth(extraText) - 2;
+              const y = cell.y + cell.height - 2;
+
+              doc.text(extraText, x, y);
+            }
+          }
         });
 
         // No extra page break needed unless more cards
