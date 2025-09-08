@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flashcards: CSV to PDF</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    input, button, label, select, textarea {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 150px;
+      resize: vertical;
+    }
+    button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Flashcards: CSV to PDF</h1>
+
+    <label for="csvFile">Upload your CSV file:</label>
+    <input type="file" id="csvFile" accept=".csv">
+
+    <label for="csvText">Or paste your CSV content (e.g. from Quizlet export) here:</label>
+    <textarea id="csvText" placeholder="e.g., een baviaan,a baboon&#10;een jachtluipaard,a cheetah&#10;een chimpansee,a chimpanzee&#10;een hert,a deer"></textarea>
+
+    <label for="fontSize">Select Font Size:</label>
+    <select id="fontSize">
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+      <option value="12">12</option>
+      <option value="14">14</option>
+      <option value="16" selected>16</option>
+      <option value="18">18</option>
+      <option value="20">20</option>
+      <option value="22">22</option>
+      <option value="24">24</option>
+    </select>
+
+    <label for="delimiter">Select CSV delimiter</label>
+    <select id="delimiter">
+      <option value="" selected>Auto</option>
+      <option value="\t">Tab</option>
+      <option value=",">Comma</option>
+      <option value=";">Semicolon</option>
+    </select>
+
+    <label for="rowSep">Select CSV row separator</label>
+    <select id="rowSep">
+      <option value="\r\n" selected>default</option>
+      <option value=";">Semicolon</option>
+    </select>
+
+    <label for="color1">Select Font Color for flashcard front:</label>
+    <!--<input type="color" id="color1" value="#000000">-->
+    <select id="color1">
+      <option value="#000000">Black</option>
+      <option value="#FF0000">Red</option>
+      <option value="#0000FF" selected>Blue</option>
+      <option value="#008000">Green</option>
+      <option value="#FFA500">Orange</option>
+    </select>
+
+    <label for="color2">Select Font Color for flashcard back:</label>
+    <!--<input type="color" id="color2" value="#000000">-->
+    <select id="color2">
+      <option value="#000000" selected>Black</option>
+      <option value="#FF0000">Red</option>
+      <option value="#0000FF">Blue</option>
+      <option value="#008000">Green</option>
+      <option value="#FFA500">Orange</option>
+    </select>
+
+    <label for="filename">Specify PDF Filename (optional):</label>
+    <input type="text" id="filename" placeholder="Enter filename without extension">
+
+    <label>
+      <input type="checkbox" id="doubleSided" checked>
+      Generate as double-sided flashcards (front & back on alternating pages)
+    </label>
+
+    <label for="chapterLabel">Card Set label (optional):</label>
+    <input type="text" id="chapterLabel" placeholder="e.g. Chapter 3 - Fractions">
+
+    <button id="generatePdf">Convert to PDF</button>
+  </div>
+
+  <script>
+    function preprocess(input, rowSepChoice) {
+      let text = input;
+
+      console.log('rowSepChoice=' + rowSepChoice);
+      // Neutralize quotes so PapaParse doesn't treat them as special
+      text = text.replace(/"/g, "§§QUOTE§§");
+
+      // Force row separator
+      if (rowSepChoice === ";") {
+        // Replace newlines with placeholder
+        text = text.replace(/\r\n/g, "§§CRLF§§");
+        text = text.replace(/\r/g, "§§CR§§");
+        text = text.replace(/\n/g, "§§LF§§");
+        // Replace semicolons with real newlines
+        text = text.replace(/;/g, "\n");
+      }
+      return text;
+    }
+
+    function postprocess(data) {
+      // Restore quotes
+      data = data.map(row =>
+        row.map(field =>
+          typeof field === "string" ? field.replace(/§§QUOTE§§/g, '"') : field
+        )
+      );
+      // Restore CRLF
+      data = data.map(row =>
+        row.map(field =>
+          typeof field === "string" ? field.replace(/§§CRLF§§/g, '\r\n') : field
+        )
+      );
+      // Restore CR
+      data = data.map(row =>
+        row.map(field =>
+          typeof field === "string" ? field.replace(/§§CR§§/g, '\r') : field
+        )
+      );
+      // Restore LF
+      data = data.map(row =>
+        row.map(field =>
+          typeof field === "string" ? field.replace(/§§LF§§/g, '\n') : field
+        )
+      );
+      return data;
+    }
+
+
+    document.getElementById('generatePdf').addEventListener('click', () => {
+      const fileInput = document.getElementById('csvFile');
+      const csvText = document.getElementById('csvText').value.trim();
+      const isDoubleSided = document.getElementById('doubleSided').checked;
+        console.log("isDoubleSided=" + isDoubleSided);
+      const chapterLabel = document.getElementById('chapterLabel').value.trim();
+        console.log("chapterLabel=" + chapterLabel);
+        console.log(typeof(chapterLabel));
+              console.log(typeof chapterLabel, chapterLabel);
+
+      if (!fileInput.files.length && !csvText) {
+        alert('Please upload a CSV file or paste CSV content.');
+        return;
+      }
+
+      if (fileInput.files.length) {
+        const file = fileInput.files[0];
+        Papa.parse(file, {
+          complete: (results) => {
+            const data = results.data;
+            if (!validateCsvData(data)) return;
+              if (isDoubleSided) {
+                generatePDFDoubleSided(data);
+              } else {
+                generatePDFSingleSided(data);
+              }
+          },
+          error: () => alert('Error reading CSV file.')
+        });
+      } else if (csvText) {
+        const rowSep = document.getElementById('rowSep').value;
+        const delimiter = document.getElementById('delimiter').value;
+        const pre = preprocess(csvText, rowSep);
+        //console.log('end of preprocessor');
+        //console.log(pre);
+        const result = Papa.parse(pre, {
+			delimiter: delimiter,
+			quoteChar: "\u0000", // impossible char → disables quote parsing
+			skipEmptyLines: true });
+        //console.log('end of parser');
+        //console.log(result);
+        const post = postprocess(result.data);
+        if (!validateCsvData(post)) return;
+        if (isDoubleSided) {
+          generatePDFDoubleSided(post);
+        } else {
+          generatePDFSingleSided(post);
+        }
+      }
+    });
+
+    function validateCsvData(data) {
+      if (data.length < 2 || data[0].length !== 2) {
+        alert('The CSV data must have exactly two columns.');
+        return false;
+      }
+      return true;
+    }
+
+    function generatePDFSingleSided(data) {
+      // print the flashcards single-sided
+      console.log("Single-sided")
+      const { jsPDF } = window.jspdf;
+
+      // Define the page size and margins in millimeters (mm)
+      const pageWidth = 297; // A4 width in mm
+      const pageHeight = 210; // A4 height in mm
+      const pageMargin = 0; // 0 cm margins
+      const cellMargin = 5; // 5 mm margins
+      const usablePageWidth = pageWidth - 2 * pageMargin;
+      const usablePageHeight = pageHeight - 2 * pageMargin;
+      const columnWidth = usablePageWidth / 4; // Divide usable width among 4 columns
+      const rowHeight = usablePageHeight / 4; // Fixed row height
+
+      // Define font size and colors
+      const fontSize = parseInt(document.getElementById('fontSize').value);
+      const color1 = document.getElementById('color1').value;
+      const color2 = document.getElementById('color2').value;
+
+      // Define PDF filename
+      const filenameInput = document.getElementById('filename').value.trim();
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      const filename = filenameInput || `flashcards-${timestamp}.pdf`;
+
+      const pdf = new jsPDF({
+        unit: 'mm', // Set unit to millimeters
+        format: 'a4', // Set page format to A4
+        orientation: 'l' // landscape
+      });
+
+      pdf.addFont("https://cdn.jsdelivr.net/npm/@vintproykt/dejavu-fonts-ttf@2.37.0/ttf/DejaVuSans.ttf", "DejaVuSans", "normal");
+      pdf.setFont("DejaVuSans", "normal");
+
+      // pdf.addFont("https://cdn.jsdelivr.net/npm/open-sans-fonts@1.6.2/open-sans/Regular/OpenSans-Regular.ttf", "OpenSans", "normal");
+      // pdf.setFont("OpenSans", "normal");
+
+      //pdf.addFileToVFS('OpenSans-Regular-normal.ttf', openSansFont);
+      //pdf.addFont('OpenSans-Regular-normal.ttf', 'OpenSans-Regular', 'normal');
+      //pdf.setFont("OpenSans-Regular", "normal");
+
+      //console.log("FontList=");
+      //console.log(pdf.getFontList());
+      //console.log("Font=");
+      //console.log(pdf.getFont());
+
+      // Prepare table data
+      const tableData = [];
+      for (let i = 0; i < data.length; i += 2) {
+        tableData.push([
+          data[i]?.[0] || "",       // 1st column of 1st CSV row
+          data[i]?.[1] || "",       // 2nd column of 1st CSV row
+          data[i + 1]?.[0] || "",   // 1st column of 2nd CSV row
+          data[i + 1]?.[1] || ""    // 2nd column of 2nd CSV row
+        ]);
+      }
+
+      // Generate the table using autoTable
+      pdf.autoTable({
+        body: tableData, // Table data
+        startY: pageMargin,  // Start at 0 cm from the top
+        theme: 'grid',
+        styles: {
+          halign: 'center',  // Center align text horizontally
+          valign: 'middle',  // Center align text vertically
+          font: 'DejaVuSans',
+          fontSize: fontSize,
+          fontStyle: 'normal',
+          cellPadding: cellMargin,
+          overflow: 'linebreak' // Enable text wrapping
+        },
+        columnStyles: {
+          0: { cellWidth: columnWidth, textColor: color1 }, // Set column width and text color
+          1: { cellWidth: columnWidth, textColor: color2 }, 
+          2: { cellWidth: columnWidth, textColor: color1 },
+          3: { cellWidth: columnWidth, textColor: color2 }
+        },
+        bodyStyles: {
+          minCellHeight: rowHeight // Fixed row height
+        },
+        pageBreak: 'auto',
+        margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin },
+        didDrawCell: function (mydata) {
+          console.log("in didDrawCell");
+          const { cell, column, doc } = mydata;
+          if (mydata.section === 'body' && column.index % 2 > 0) {
+            // Add your extra text
+            const extraText = chapterLabel.value.trim();
+
+            doc.setFontSize(8);
+            // Calculate position in bottom-right corner
+            const x = cell.x + cell.width - doc.getTextWidth(extraText) - 2;
+            const y = cell.y + cell.height - 2;
+
+            doc.text(extraText, x, y);
+          }
+        }
+      });
+
+      pdf.save(filename);
+    }
+
+    function generatePDFDoubleSided(data) {
+      // print the flashcards recto-verso
+      console.log("Double-sided")
+      const { jsPDF } = window.jspdf;
+
+      const pageWidth = 297;
+      const pageHeight = 210;
+      const pageMargin = 0;
+      const cellMargin = 5;
+      const usablePageWidth = pageWidth - 2 * pageMargin;
+      const usablePageHeight = pageHeight - 2 * pageMargin;
+      const columnWidth = usablePageWidth / 4;
+      const rowHeight = usablePageHeight / 4;
+
+      const fontSize = parseInt(document.getElementById('fontSize').value);
+      const color1 = document.getElementById('color1').value;
+      const color2 = document.getElementById('color2').value;
+
+      const filenameInput = document.getElementById('filename').value.trim();
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      const filename = filenameInput || `flashcards-${timestamp}.pdf`;
+
+      const pdf = new jsPDF({
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'l'
+      });
+
+      pdf.addFont("https://cdn.jsdelivr.net/npm/@vintproykt/dejavu-fonts-ttf@2.37.0/ttf/DejaVuSans.ttf", "DejaVuSans", "normal");
+      pdf.setFont("DejaVuSans", "normal");      
+
+      // pdf.addFont("https://cdn.jsdelivr.net/npm/open-sans-fonts@1.6.2/open-sans/Regular/OpenSans-Regular.ttf", "OpenSans", "normal");
+      // pdf.setFont("OpenSans", "normal");
+
+      //pdf.addFileToVFS('OpenSans-Regular-normal.ttf', openSansFont);
+      //pdf.addFont('OpenSans-Regular-normal.ttf', 'OpenSans-Regular', 'normal');
+      //pdf.setFont("OpenSans-Regular", "normal");
+
+      //console.log("FontList=");
+      //console.log(pdf.getFontList());
+      //console.log("Font=");
+      //console.log(pdf.getFont());
+
+      const chunkSize = 16;
+      for (let i = 0; i < data.length; i += chunkSize) {
+        const chunk = data.slice(i, i + chunkSize);
+
+        const front = [];
+        const back = [];
+
+        for (let row = 0; row < 4; row++) {
+          const frontRow = [];
+          const backRow = [];
+          for (let col = 0; col < 4; col++) {
+            const index = row * 4 + col;
+            frontRow.push(chunk[index]?.[0] || "");   // Front: term
+            backRow.unshift(chunk[index]?.[1] || ""); // Back: mirrored answers
+          }
+          front.push(frontRow);
+          back.push(backRow);
+        }
+
+        // Page 1: front side
+        pdf.autoTable({
+          body: front,
+          startY: pageMargin,
+          theme: 'grid',
+          styles: {
+            halign: 'center',
+            valign: 'middle',
+            font: 'DejaVuSans',
+            fontSize: fontSize,
+            fontStyle: 'normal',
+            cellPadding: cellMargin,
+            lineColor: 0,
+            textColor: color1,
+            overflow: 'linebreak'
+          },
+          columnStyles: {
+            0: { cellWidth: columnWidth },
+            1: { cellWidth: columnWidth },
+            2: { cellWidth: columnWidth },
+            3: { cellWidth: columnWidth }
+          },
+          bodyStyles: {
+            minCellHeight: rowHeight
+          },
+          margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin }
+        });
+
+        pdf.addPage();
+
+        // Page 2: back side
+        pdf.autoTable({
+          body: back,
+          startY: pageMargin,
+          theme: 'grid',
+          styles: {
+            halign: 'center',
+            valign: 'middle',
+            font: 'DejaVuSans',
+            fontSize: fontSize,
+            fontStyle: 'normal',
+            cellPadding: cellMargin,
+            lineColor: 0,
+            textColor: color2,
+            overflow: 'linebreak'
+          },
+          columnStyles: {
+            0: { cellWidth: columnWidth },
+            1: { cellWidth: columnWidth },
+            2: { cellWidth: columnWidth },
+            3: { cellWidth: columnWidth }
+          },
+          bodyStyles: {
+            minCellHeight: rowHeight
+          },
+          margin: { top: pageMargin, left: pageMargin, right: pageMargin, bottom: pageMargin },
+          didDrawCell: function (mydata) {
+            console.log("in didDrawCell");
+            const { cell, doc } = mydata;
+            if (mydata.section === 'body') {
+              // Add your extra text
+              const extraText = chapterLabel.value.trim();
+
+              doc.setFontSize(8);
+              // Calculate position in bottom-right corner
+              const x = cell.x + cell.width - doc.getTextWidth(extraText) - 2;
+              const y = cell.y + cell.height - 2;
+
+              doc.text(extraText, x, y);
+            }
+          }
+        });
+
+        // No extra page break needed unless more cards
+        if (i + chunkSize < data.length) {
+          pdf.addPage();
+        }
+      }
+
+      pdf.save(filename);
+    }
+</script>
+</body>
+</html>
